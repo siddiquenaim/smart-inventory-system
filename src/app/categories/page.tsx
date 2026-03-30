@@ -22,6 +22,14 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CategoryFormDialog } from "@/components/categories/category-actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { CategoryInput } from "@/lib/validations/category";
 import { Pencil, Plus, Trash } from "lucide-react";
 
@@ -58,7 +66,8 @@ export default function CategoriesPage() {
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [modalError, setModalError] = useState<ModalError>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Category | null>(null);
 
   const fetchCategories = useCallback(async () => {
     setLoading(true);
@@ -139,11 +148,14 @@ export default function CategoriesPage() {
     }
   };
 
-  const handleDeleteCategory = async (category: Category) => {
-    setDeletingId(category.id);
+  const confirmDeleteCategory = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+    setIsDeleting(true);
     setGlobalError(null);
     try {
-      const response = await fetch(`/api/categories/${category.id}`, {
+      const response = await fetch(`/api/categories/${deleteTarget.id}`, {
         method: "DELETE",
       });
       if (!response.ok) {
@@ -152,10 +164,11 @@ export default function CategoriesPage() {
         return;
       }
       await fetchCategories();
+      setDeleteTarget(null);
     } catch (error) {
       setGlobalError(createErrorMessage(error));
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
     }
   };
 
@@ -264,11 +277,11 @@ export default function CategoriesPage() {
                           variant="ghost"
                           size="sm"
                           className="rounded-full text-destructive"
-                          onClick={() => handleDeleteCategory(category)}
-                          disabled={deletingId === category.id}
+                          onClick={() => setDeleteTarget(category)}
+                          disabled={isDeleting}
                         >
                           <Trash className="size-4" />
-                          {deletingId === category.id ? "Deleting" : "Delete"}
+                          Delete
                         </Button>
                       </div>
                     </TableCell>
@@ -316,6 +329,55 @@ export default function CategoriesPage() {
             : undefined
         }
       />
+
+      <Dialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(isOpen) => {
+          if (!isOpen) {
+            setDeleteTarget(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete category?</DialogTitle>
+            <DialogDescription>
+              This action removes the category from the system including any
+              products that reference it. It cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete{" "}
+              <span className="font-semibold text-foreground">
+                {deleteTarget?.name}
+              </span>
+              ? This cannot be undone.
+            </p>
+            {globalError && (
+              <div className="rounded-2xl border border-destructive/60 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {globalError}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteTarget(null)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteCategory}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting…" : "Delete category"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

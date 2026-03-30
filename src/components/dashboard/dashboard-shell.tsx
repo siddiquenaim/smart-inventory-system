@@ -68,7 +68,9 @@ export function DashboardShell({ user }: DashboardShellProps) {
               </Badge>
               <div className="space-y-2">
                 <h1 className="text-3xl font-semibold tracking-[-0.04em] text-foreground sm:text-4xl">
-                  {user.name ? `Welcome back, ${user.name}` : "Dashboard preview"}
+                  {user.name
+                    ? `Welcome back, ${user.name}`
+                    : "Dashboard preview"}
                 </h1>
                 <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
                   This page verifies the authenticated dashboard layout, session
@@ -77,15 +79,6 @@ export function DashboardShell({ user }: DashboardShellProps) {
                 </p>
               </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="rounded-full"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              <LogOut className="size-4" />
-              Logout
-            </Button>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
