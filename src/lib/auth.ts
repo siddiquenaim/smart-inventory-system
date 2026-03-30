@@ -1,6 +1,8 @@
 import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
+import { DEMO_CREDENTIALS, ROUTES } from "@/lib/constants";
+
 export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
@@ -20,11 +22,14 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
-        if (email === "demo@example.com" && password === "demo123456") {
+        if (
+          email === DEMO_CREDENTIALS.email &&
+          password === DEMO_CREDENTIALS.password
+        ) {
           return {
             id: "demo-user",
             name: "Demo User",
-            email: "demo@example.com",
+            email: DEMO_CREDENTIALS.email,
           };
         }
 
@@ -36,6 +41,6 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   pages: {
-    signIn: "/login",
+    signIn: ROUTES.login,
   },
 };
