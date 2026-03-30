@@ -2,6 +2,7 @@ import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
 import { DEMO_CREDENTIALS, ROUTES } from "@/lib/constants";
+import { authenticateUser } from "@/server/auth/credentials-auth";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -17,23 +18,8 @@ export const authOptions: NextAuthOptions = {
           typeof credentials?.password === "string"
             ? credentials.password
             : "";
-
-        if (!email || !password) {
-          return null;
-        }
-
-        if (
-          email === DEMO_CREDENTIALS.email &&
-          password === DEMO_CREDENTIALS.password
-        ) {
-          return {
-            id: "demo-user",
-            name: "Demo User",
-            email: DEMO_CREDENTIALS.email,
-          };
-        }
-
-        return null;
+        const sessionUser = await authenticateUser(email, password);
+        return sessionUser ?? null;
       },
     }),
   ],

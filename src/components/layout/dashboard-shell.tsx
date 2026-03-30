@@ -1,0 +1,55 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  Activity,
+  Layers,
+  LayoutDashboard,
+  ListChecks,
+  ShoppingCart,
+  SquareStack,
+} from "lucide-react";
+
+const navItems = [
+  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Categories", href: "/categories", icon: Layers },
+  { label: "Products", href: "/products", icon: SquareStack },
+  { label: "Orders", href: "/orders", icon: ShoppingCart },
+  { label: "Restock Queue", href: "/restock-queue", icon: ListChecks },
+  { label: "Activity Logs", href: "/activity-logs", icon: Activity },
+];
+
+export function DashboardShellLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  return (
+    <div className="flex min-h-screen flex-col bg-background">
+      <div className="container mx-auto flex flex-1 flex-col gap-6 px-4 py-8 md:flex-row md:gap-8 lg:px-6">
+        <nav className="sticky top-4 hidden w-64 flex-col gap-2 rounded-3xl border border-border/80 bg-card/70 p-4 text-sm shadow-sm md:flex">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
+            Navigation
+          </p>
+          {navItems.map(({ label, href, icon: Icon }) => {
+            const active = pathname === href;
+            return (
+              <Link
+                key={href}
+                href={href}
+                className={`flex items-center gap-3 rounded-2xl px-3 py-2 transition ${
+                  active
+                    ? "bg-primary/10 text-primary"
+                    : "text-foreground hover:bg-muted/30"
+                }`}
+              >
+                <Icon className="size-4" />
+                {label}
+              </Link>
+            );
+          })}
+        </nav>
+        <section className="flex-1 space-y-6">{children}</section>
+      </div>
+    </div>
+  );
+}

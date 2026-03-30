@@ -4,9 +4,15 @@ import Link from "next/link";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
-import { ArrowLeft, Loader2, LockKeyhole, Mail } from "lucide-react";
+import {
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
 
-import { DEMO_CREDENTIALS, ROUTES } from "@/lib/constants";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +24,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ROUTES } from "@/lib/constants";
+
+const DEMO_CREDENTIALS = {
+  email: "demo@gmail.com",
+  password: "Demo12345",
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,21 +37,25 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  function handleSignIn(nextEmail: string, nextPassword: string) {
+  const handleSignIn = (credentials = { email, password }) => {
+    const { email: credentialEmail, password: credentialPassword } = credentials;
+    setEmail(credentialEmail);
+    setPassword(credentialPassword);
     setIsPending(true);
     setError("");
 
     startTransition(async () => {
       const result = await signIn("credentials", {
-        email: nextEmail,
-        password: nextPassword,
+        email: credentialEmail,
+        password: credentialPassword,
         callbackUrl: ROUTES.dashboard,
         redirect: false,
       });
 
       if (!result?.ok) {
-        setError("Invalid credentials. Use the demo account to continue.");
+        setError("Invalid credentials.");
         setIsPending(false);
         return;
       }
@@ -64,18 +80,18 @@ export default function LoginPage() {
             Sign in to the inventory control workspace.
           </h1>
           <p className="mt-5 max-w-lg text-base leading-7 text-muted-foreground">
-            This boilerplate login screen verifies the credentials flow,
-            session handling, and the protected route pattern before feature
-            development starts.
+            This login screen verifies the credentials flow, session handling,
+            and the protected route pattern before feature development starts.
           </p>
           <div className="mt-8 rounded-3xl border border-border/70 bg-card/70 p-5">
-            <p className="text-sm font-medium text-foreground">
-              Demo credentials
+            <p className="text-sm font-medium text-foreground">New here?</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Create an account when you are ready.{" "}
+              <Link className="text-primary underline" href={ROUTES.signup}>
+                Request access
+              </Link>
+              .
             </p>
-            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <p>Email: {DEMO_CREDENTIALS.email}</p>
-              <p>Password: {DEMO_CREDENTIALS.password}</p>
-            </div>
           </div>
           <Button
             asChild
@@ -98,8 +114,7 @@ export default function LoginPage() {
               Welcome back
             </CardTitle>
             <CardDescription className="max-w-md leading-6">
-              Sign in with the demo account or enter the credentials manually to
-              confirm NextAuth is wired correctly.
+              Sign in with the email you used during signup.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -107,7 +122,7 @@ export default function LoginPage() {
               className="space-y-5"
               onSubmit={(event) => {
                 event.preventDefault();
-                handleSignIn(email, password);
+                handleSignIn();
               }}
             >
               <div className="space-y-2">
@@ -133,7 +148,7 @@ export default function LoginPage() {
                   <LockKeyhole className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     placeholder="Enter your password"
                     value={password}
@@ -141,6 +156,18 @@ export default function LoginPage() {
                     className="h-11 rounded-2xl pl-11"
                     disabled={isPending}
                   />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="size-4" />
+                    ) : (
+                      <Eye className="size-4" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -150,39 +177,37 @@ export default function LoginPage() {
                 </div>
               ) : null}
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="flex-1 rounded-full"
-                  disabled={isPending}
-                >
-                  {isPending ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Signing in
-                    </>
-                  ) : (
-                    "Sign in"
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  size="lg"
-                  variant="outline"
-                  className="flex-1 rounded-full"
-                  disabled={isPending}
-                  onClick={() => {
-                    setEmail(DEMO_CREDENTIALS.email);
-                    setPassword(DEMO_CREDENTIALS.password);
-                    handleSignIn(
-                      DEMO_CREDENTIALS.email,
-                      DEMO_CREDENTIALS.password,
-                    );
-                  }}
-                >
-                  Use demo login
-                </Button>
+              <div className="flex justify-between">
+                <Link className="text-sm text-primary underline" href={ROUTES.signup}>
+                  Create new account
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full px-4 text-xs"
+                    disabled={isPending}
+                    onClick={() => handleSignIn(DEMO_CREDENTIALS)}
+                  >
+                    Demo login
+                  </Button>
+                  <Button
+                    type="submit"
+                    size="lg"
+                    className="rounded-full"
+                    disabled={isPending}
+                  >
+                    {isPending ? (
+                      <>
+                        <Loader2 className="size-4 animate-spin" />
+                        Signing in
+                      </>
+                    ) : (
+                      "Sign in"
+                    )}
+                  </Button>
+                </div>
               </div>
             </form>
           </CardContent>
