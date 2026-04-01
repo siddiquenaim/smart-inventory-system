@@ -1,7 +1,7 @@
 import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 
-import { DEMO_CREDENTIALS, ROUTES } from "@/lib/constants";
+import { ROUTES } from "@/lib/constants";
 import { authenticateUser } from "@/server/auth/credentials-auth";
 
 export const authOptions: NextAuthOptions = {
@@ -25,6 +25,20 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token.id) {
+        session.user.id = String(token.id);
+      }
+      return session;
+    },
   },
   pages: {
     signIn: ROUTES.login,

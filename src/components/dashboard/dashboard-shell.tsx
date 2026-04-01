@@ -1,17 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { signOut } from "next-auth/react";
-import {
-  Activity,
-  Boxes,
-  LogOut,
-  PackageCheck,
-  ShoppingCart,
-} from "lucide-react";
+import { Activity, Boxes, PackageCheck, ShoppingCart } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,

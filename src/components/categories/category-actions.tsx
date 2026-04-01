@@ -10,6 +10,7 @@ import {
   DialogContent,
   DialogFooter,
   DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,12 +63,12 @@ export function CategoryFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader className="space-y-1">
-          <div className="text-lg font-semibold text-foreground">{title}</div>
-          {description && (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          )}
+        <DialogContent className="max-w-md">
+          <DialogHeader className="space-y-1">
+            <DialogTitle>{title}</DialogTitle>
+            {description && (
+              <p className="text-sm text-muted-foreground">{description}</p>
+            )}
         </DialogHeader>
         <form className="mt-2 space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-1 text-sm">

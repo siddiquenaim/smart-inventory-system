@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
@@ -33,14 +34,15 @@ const DEMO_CREDENTIALS = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState(DEMO_CREDENTIALS.email);
+  const [password, setPassword] = useState(DEMO_CREDENTIALS.password);
   const [error, setError] = useState("");
   const [isPending, setIsPending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   const handleSignIn = (credentials = { email, password }) => {
-    const { email: credentialEmail, password: credentialPassword } = credentials;
+    const { email: credentialEmail, password: credentialPassword } =
+      credentials;
     setEmail(credentialEmail);
     setPassword(credentialPassword);
     setIsPending(true);
@@ -64,7 +66,7 @@ export default function LoginPage() {
       router.refresh();
       setIsPending(false);
     });
-  }
+  };
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-6xl items-center px-6 py-16 sm:px-8 lg:px-10">
@@ -107,6 +109,13 @@ export default function LoginPage() {
 
         <Card className="border border-white/50 bg-white/80 backdrop-blur-sm">
           <CardHeader>
+            <Image
+              alt="logo"
+              src="https://i.ibb.co.com/Ps5BhJ63/smart-inv.png"
+              width={72}
+              height={72}
+              className="mx-auto mb-2"
+            />
             <Badge variant="secondary" className="w-fit">
               Credentials Login
             </Badge>
@@ -160,7 +169,9 @@ export default function LoginPage() {
                     type="button"
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-muted-foreground hover:text-foreground"
                     onClick={() => setShowPassword((prev) => !prev)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? (
                       <EyeOff className="size-4" />
@@ -178,20 +189,13 @@ export default function LoginPage() {
               ) : null}
 
               <div className="flex justify-between">
-                <Link className="text-sm text-primary underline" href={ROUTES.signup}>
+                <Link
+                  className="text-sm text-primary underline"
+                  href={ROUTES.signup}
+                >
                   Create new account
                 </Link>
                 <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="rounded-full px-4 text-xs"
-                    disabled={isPending}
-                    onClick={() => handleSignIn(DEMO_CREDENTIALS)}
-                  >
-                    Demo login
-                  </Button>
                   <Button
                     type="submit"
                     size="lg"

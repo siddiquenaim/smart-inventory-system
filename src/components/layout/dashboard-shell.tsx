@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -36,9 +37,13 @@ export function DashboardShellLayout({
       <div className="container mx-auto flex flex-1 flex-col gap-6 px-4 py-6 md:flex-row md:gap-8 lg:px-6">
         <nav className="sticky top-6 hidden w-64 h-[calc(100vh-40px)] rounded-3xl border border-border/80 bg-card/70 p-4 text-sm shadow-sm md:flex">
           <div className="flex h-full w-full flex-col gap-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground">
-              Navigation
-            </p>
+            <Image
+              alt="logo"
+              src="https://i.ibb.co.com/Ps5BhJ63/smart-inv.png"
+              width={72}
+              height={72}
+              className="mx-auto mb-6"
+            />
             <div className="space-y-1 flex flex-1 flex-col justify-start">
               {navItems.map(({ label, href, icon: Icon }) => {
                 const active = pathname === href;

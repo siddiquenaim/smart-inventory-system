@@ -18,9 +18,10 @@ export const productStatusEnum = pgEnum("product_status", [
 ]);
 export const orderStatusEnum = pgEnum("order_status", [
   "pending",
-  "processing",
-  "completed",
-  "canceled",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
 ]);
 export const restockPriorityEnum = pgEnum("restock_priority", [
   "low",

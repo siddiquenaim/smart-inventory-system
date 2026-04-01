@@ -22,6 +22,20 @@
       "when": 1774893683465,
       "tag": "0002_dear_the_executioner",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1775079000000,
+      "tag": "0003_order_status_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775078838915,
+      "tag": "0004_lazy_mercury",
+      "breakpoints": true
     }
   ]
 }
