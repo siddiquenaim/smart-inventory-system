@@ -12,9 +12,8 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const productStatusEnum = pgEnum("product_status", [
-  "draft",
   "active",
-  "archived",
+  "out_of_stock",
 ]);
 export const orderStatusEnum = pgEnum("order_status", [
   "pending",
@@ -54,7 +53,7 @@ export const products = pgTable("products", {
   categoryId: uuid("category_id")
     .notNull()
     .references(() => categories.id, { onDelete: "cascade" }),
-  status: productStatusEnum("status").notNull().default("draft"),
+  status: productStatusEnum("status").notNull().default("active"),
   stockQuantity: integer("stock_quantity").default(sql`0`).notNull(),
   threshold: integer("threshold").default(sql`5`).notNull(),
   price: numeric("price", { precision: 14, scale: 2 }).notNull(),

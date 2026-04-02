@@ -197,6 +197,16 @@ export default function LoginPage() {
                 </Link>
                 <div className="flex items-center gap-2">
                   <Button
+                    type="button"
+                    size="lg"
+                    variant="outline"
+                    className="rounded-full"
+                    onClick={() => handleSignIn(DEMO_CREDENTIALS)}
+                    disabled={isPending}
+                  >
+                    Demo Login
+                  </Button>
+                  <Button
                     type="submit"
                     size="lg"
                     className="rounded-full"

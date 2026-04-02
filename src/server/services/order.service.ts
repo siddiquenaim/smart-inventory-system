@@ -233,7 +233,7 @@ export async function createOrder(input: CreateOrderInput) {
         .update(products)
         .set({
           stockQuantity: nextStock,
-          status: nextStock <= 0 ? "archived" : "active",
+          status: nextStock <= 0 ? "out_of_stock" : "active",
         })
         .where(eq(products.id, item.productId));
     }
@@ -301,7 +301,7 @@ export async function updateOrderStatus(orderId: string, nextStatus: OrderStatus
           .update(products)
           .set({
             stockQuantity: nextStock,
-            status: nextStock > 0 ? "active" : "archived",
+            status: nextStock > 0 ? "active" : "out_of_stock",
           })
           .where(eq(products.id, item.productId));
       }

@@ -36,6 +36,13 @@
       "when": 1775078838915,
       "tag": "0004_lazy_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1775082600000,
+      "tag": "0005_product_status_alignment",
+      "breakpoints": true
     }
   ]
 }

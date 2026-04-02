@@ -1,457 +1,139 @@
-# 🧠 CODEX WORKFLOW (STRICT MODE)
+## Smart Inventory Completion Plan (Strict Small-Step Gates)
+
+### Summary
 
-## 🔒 Global Rules (YOU MUST FOLLOW)
+We’ll implement requirements 4–8 in **small, sequential steps**.  
+Rule: **no next step starts until the current step passes its gate** (API behavior, UI behavior, and regression checks).  
+Decisions locked from your inputs:
 
-```txt
-1. One Codex prompt = one task only
-2. Never combine steps
-3. After every step:
-   - run app
-   - test manually
-   - check errors
-4. Only then ask for next step
-5. If something breaks → fix before moving
-```
+- Completed orders = **Delivered only**
+- Restock priority = **stock-ratio based**
+- Restock queue tie-breaker = **oldest first**
 
----
+### Implementation Steps (with hard gates)
 
-# 🧱 PHASE 1 — DATABASE FOUNDATION (CRITICAL)
+1. **Step 4.1: Stock deduction + insufficient stock enforcement hardening**
 
-## 🟢 STEP 1 — Full Database Schema
+- Backend: ensure order create/update paths always re-check live stock in transaction.
+- Error contract: return exact warning pattern `Only X items available in stock`.
+- Gate to pass:
 
-### 🎯 Goal
+1. Stock always deducts on successful order.
+2. Insufficient stock blocks confirmation with correct warning.
+3. If stock becomes 0, product status becomes `out_of_stock`.
+
+4. **Step 6.1: Conflict detection hardening in order flows**
+
+- Enforce on backend (not only UI):
+- Reject duplicate product lines in same order with `This product is already added to the order.`
+- Reject unavailable products (`out_of_stock`) with `This product is currently unavailable.`
+- Apply to both order creation and any future order-item updates.
+- Gate to pass:
+
+1. Duplicate lines blocked consistently.
+2. Out-of-stock product cannot be ordered even if request is crafted manually.
+
+3. **Step 5.1: Automatic restock queue population**
 
-Replace test schema with real production schema.
-
-### 📦 Codex Prompt
-
-Create a complete Drizzle schema for a Smart Inventory System.
-
-Tables:
-
-- users
-- categories
-- products
-- orders
-- order_items
-- restock_queue
-- activity_logs
-
-Requirements:
-
-- Use PostgreSQL types
-- Use enums for:
-  - product status
-  - order status
-  - restock priority
-
-- Add proper relations (foreign keys)
-- Include timestamps
-- Use UUID as primary keys
-- Ensure type safety
-
-Only modify:
-
-- src/server/db/schema.ts
-
-Do not touch any other files.
-
----
-
-## 🟢 STEP 2 — Relations + Migration
-
-### 🎯 Goal
-
-Make schema usable.
-
-### 📦 Codex Prompt
-
-Add Drizzle relations for all tables in schema.
-
-Ensure:
-
-- users → orders
-- categories → products
-- orders → order_items
-- products → order_items
-- products → restock_queue
-
-Then prepare schema for migration.
-
-Only modify:
-
-- src/server/db/schema.ts
-
-Do not generate migrations manually.
-
----
-
-### 🧪 After Step 2 (YOU do manually)
-
-```bash
-pnpm db:generate
-pnpm db:push
-```
-
-If this fails → STOP and fix.
-
----
-
-# 🔐 PHASE 2 — AUTH (REAL, NOT DEMO)
-
-## 🟢 STEP 3 — DB-backed Auth
-
-### 🎯 Goal
-
-Replace demo login with real DB auth.
-
-### 📦 Codex Prompt
-
-Replace demo credentials auth with database-backed authentication.
-
-Requirements:
-
-- Use users table
-- Validate email + password
-- Hash passwords using bcrypt
-- Return proper user session
-- Keep NextAuth structure intact
-
-Only modify:
-
-- src/lib/auth.ts
-- create helper in src/server/auth/
-
-Do not touch UI yet.
-
----
-
-## 🟢 STEP 4 — Signup API
-
-### 🎯 Goal
-
-Allow user creation.
-
-### 📦 Codex Prompt
-
-Create a signup API using Hono.
-
-Requirements:
-
-- POST /api/auth/signup
-- Validate input using zod
-- Hash password
-- Insert user into DB
-- Return success or error
-
-Only modify:
-
-- src/app/api/[[...route]]/route.ts
-- create validation in src/server/validations/
-
----
-
-# 🧭 PHASE 3 — DASHBOARD SHELL
-
-## 🟢 STEP 5 — Layout + Navigation
-
-### 🎯 Goal
-
-Real app structure.
-
-### 📦 Codex Prompt
-
-Create a dashboard layout with:
-
-- Sidebar navigation
-- Top header
-- Main content area
-
-Routes:
-
-- dashboard
-- categories
-- products
-- orders
-- restock queue
-- activity logs
-
-Use:
-
-- shadcn components
-- clean spacing
-- responsive layout
-
-Only modify:
-
-- src/components/layout/
-- src/app/dashboard/layout.tsx
-
----
-
-# 📦 PHASE 4 — CATEGORY MODULE
-
-## 🟢 STEP 6 — Category Backend
-
-Create category APIs using Hono:
-
-- GET /categories
-- POST /categories
-- PUT /categories/:id
-- DELETE /categories/:id
-
-Add validation using zod.
-
-Only modify:
-
-- src/app/api/[[...route]]/route.ts
-- src/server/services/category.service.ts
-
----
-
-## 🟢 STEP 7 — Category UI
-
-Build category UI:
-
-- Category list table
-- Add category modal/form
-- Edit + delete actions
-
-Use:
-
-- shadcn table, dialog, form
-- react-hook-form + zod
-
-Only modify:
-
-- src/app/categories/page.tsx
-- src/components/categories/
-
----
-
-# 📦 PHASE 5 — PRODUCT MODULE
-
-## 🟢 STEP 8 — Product Backend
-
-Create product APIs:
-
-- GET /products
-- POST /products
-- PUT /products/:id
-- DELETE /products/:id
-
-Rules:
-
-- link with category
-- include stock + threshold
-- include product status
-
-Only modify:
-
-- services + api files
-
----
-
-## 🟢 STEP 9 — Product UI
-
-Build product UI:
-
-- product table
-- add/edit product form
-- show stock status badge
-- show low stock indicator
-
-Use:
-
-- shadcn components
-- clean UX
-
-Only modify:
-
-- product pages + components
-
----
-
-# 🧾 PHASE 6 — ORDER SYSTEM (CORE LOGIC)
-
-## 🟢 STEP 10 — Order Creation API (IMPORTANT)
-
-Create order creation API with transaction.
-
-Rules:
-
-- prevent duplicate product entries
-- validate stock availability
-- calculate total price
-- insert order + order_items
-- deduct stock
-- update product status if needed
-
-Use transaction.
-
-Only modify:
-
-- order.service.ts
-- api route
-
----
-
-## 🟢 STEP 11 — Order UI
-
-Build order creation UI:
-
-- dynamic product selection
-- quantity input
-- auto total calculation
-- validation messages
-
-Prevent:
-
-- duplicate products
-- invalid quantities
-
-Only modify:
-
-- order page + components
-
----
-
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-[PENDING_FROM_HERE_GO_TO_THIS_LINE]
-
-# 🔄 PHASE 7 — STOCK & RESTOCK
-
-## 🟢 STEP 12 — Restock Logic
-
-Implement restock queue logic:
-
-- if stock < threshold → add to queue
-- assign priority
-- avoid duplicates
-- mark resolved when restocked
-
-Only modify:
-
-- restock.service.ts
-
----
-
-## 🟢 STEP 13 — Restock UI
-
-Build restock queue UI:
-
-- table of low stock products
-- priority badge
-- restock action
-
-Only modify:
-
-- restock pages
-
----
-
-# 📊 PHASE 8 — DASHBOARD + LOGS
-
-## 🟢 STEP 14 — Activity Logs
-
-Implement activity logging system:
-
-- log order creation
-- log stock updates
-- log restock actions
-
-Store in activity_logs table.
-
-Only modify:
-
-- activity-log service
-
----
-
-## 🟢 STEP 15 — Dashboard Metrics
-
-Build dashboard metrics:
-
-- total orders today
-- revenue today
-- low stock count
-- pending vs completed orders
-
-Add summary widgets.
-
-Only modify:
-
-- dashboard page
-
----
-
-# ✨ PHASE 9 — POLISH
-
-## 🟢 STEP 16 — UX Polish
-
-Improve UX:
-
-- loading skeletons
-- empty states
-- error states
-- toast notifications (sonner)
-- smooth animations (framer motion)
-
-Do not change business logic.
-
----
-
-## 🟢 STEP 17 — Performance + Cleanup
-
-Optimize app:
-
-- remove unused code
-- optimize queries
-- ensure no unnecessary re-renders
-- improve type safety
-
-Do not add new features.
-
----
-
-# 🚀 PHASE 10 — DEPLOYMENT
-
-## 🟢 STEP 18 — Deployment
-
-Prepare app for deployment:
-
-- env validation
-- production-safe configs
-- error handling
-- logging
-
-Target:
-
-- Vercel + Neon
-
----
-
-# 🧠 FINAL RULE (IMPORTANT)
-
-When using Codex:
-
-```txt
-YOU:
-- paste ONE prompt
-- wait for response
-- implement
-- test
-
-ME:
-- give next step
-```
-
----
+- Add queue sync logic whenever stock changes (order placement, cancel/restock/manual stock update).
+- Rule: product enters queue when `stockQuantity < threshold`.
+- Queue ordering: `stockQuantity ASC`, then `requestedAt ASC` (oldest first tie-breaker).
+- Priority (stock ratio):
+- `high`: stock = 0
+- `medium`: stock > 0 and stock/threshold <= 0.5
+- `low`: stock/threshold > 0.5 and still below threshold
+- Gate to pass:
+
+1. Queue entry auto-created/updated when below threshold.
+2. No duplicate queue rows per product (upsert behavior).
+3. Priority/ordering matches rules above.
+
+4. **Step 5.2: Restock Queue APIs + page**
+
+- Add API endpoints under existing Hono router:
+- `GET /api/restock-queue`
+- `PATCH /api/restock-queue/:id` (manual restock stock update + priority recalc)
+- `DELETE /api/restock-queue/:id` (manual remove)
+- Add `/restock-queue` page with table, priority badge, stock info, restock action, remove action.
+- Gate to pass:
+
+1. Queue visible and correctly sorted.
+2. Restock updates product stock and removes item when no longer low stock.
+3. Manual remove works and reflects instantly in UI.
+
+4. **Step 8.1: Activity log pipeline**
+
+- Add service helper for log writes and list reads.
+- Log actions for:
+- order created
+- order status changed
+- stock updated/restocked
+- product moved to restock queue
+- Add `GET /api/activity-logs?limit=10` and `/activity-logs` page.
+- Gate to pass:
+
+1. Latest 5–10 actions visible in reverse chronological order.
+2. Messages follow required style (time + action + actor/entity).
+
+3. **Step 7.1: Dashboard insights backend**
+
+- Replace placeholders with real metrics query service:
+- Total Orders Today
+- Pending vs Completed (completed = delivered only)
+- Low Stock Items Count
+- Revenue Today (sum of today’s order totals; use delivered orders)
+- Product summary list: name + stock + state (Low Stock/OK)
+- Add endpoint: `GET /api/dashboard/insights`.
+- Gate to pass:
+
+1. Metrics match DB data for same day boundaries.
+2. Pending/completed split matches locked definition.
+3. Product summary correctly labels low-stock vs ok.
+
+4. **Step 7.2: Dashboard UI replacement**
+
+- Wire dashboard cards and summary list to real API.
+- Keep loading/empty/error states deterministic.
+- Gate to pass:
+
+1. No placeholder metrics remain.
+2. Metrics update after order/stock operations.
+3. Summary examples match required format semantics.
+
+4. **Step 9 (stabilization before optional bonus)**
+
+- End-to-end regression pass for auth + categories + products + orders + restock + dashboard + logs.
+- Gate to pass:
+
+1. All mandatory requirements 1–8 satisfied in one flow.
+2. No route-level 404s from sidebar entries.
+3. Clear error messages for all guarded actions.
+
+### Public API / Interface Additions
+
+- New APIs:
+- `GET /api/restock-queue`
+- `PATCH /api/restock-queue/:id`
+- `DELETE /api/restock-queue/:id`
+- `GET /api/activity-logs?limit=`
+- `GET /api/dashboard/insights`
+- Error message contracts (user-visible, stable):
+- `Only X items available in stock`
+- `This product is already added to the order.`
+- `This product is currently unavailable.`
+
+### Test Plan (required before each gate sign-off)
+
+- **Stock handling:** exact deduction, insufficient stock rejection, zero-stock status transition.
+- **Conflict detection:** duplicate line rejection, out-of-stock rejection via API-level tests.
+- **Restock queue:** auto insert/update/remove, priority mapping correctness, deterministic sorting.
+- **Dashboard:** today filters, pending/completed math, revenue correctness.
+- **Activity logs:** required actions logged and ordered latest-first.
+- **Integration flow:** create product/category -> create order -> low stock queue -> restock -> queue clear -> dashboard/log updates.
+
+### Assumptions (locked)
+
+- “Completed” means **Delivered** only.
+- Restock priority uses **stock ratio** thresholds defined above.
+- Queue tie-breaker for same stock is **oldest first** (`requestedAt ASC`).
+- Optional bonus items (search/filter expansion, pagination, analytics chart, role-based access) start only after all mandatory gates pass.

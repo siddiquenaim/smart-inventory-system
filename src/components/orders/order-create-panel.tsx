@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -27,7 +27,7 @@ type Product = {
   id: string;
   name: string;
   sku: string;
-  status: "draft" | "active" | "archived";
+  status: "active" | "out_of_stock";
   stockQuantity: number;
   threshold: number;
   price: string | number;
@@ -336,6 +336,7 @@ export function OrderCreatePanel({ products, onOrderCreated }: OrderCreatePanelP
     </Card>
   );
 }
+
 
 
 

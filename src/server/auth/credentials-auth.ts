@@ -1,10 +1,16 @@
 "use server";
 
 import bcrypt from "bcrypt";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { users } from "@/server/db/schema";
-import { eq } from "drizzle-orm";
+
+const DEMO_USER = {
+  name: "Demo User",
+  email: "demo@gmail.com",
+  password: "Demo12345",
+} as const;
 
 export type AuthenticatedUser = {
   id: string;
@@ -17,6 +23,10 @@ export async function authenticateUser(
   password: string,
 ): Promise<AuthenticatedUser | null> {
   if (!email || !password) return null;
+
+  if (email === DEMO_USER.email && password === DEMO_USER.password) {
+    await ensureDemoUser();
+  }
 
   const user = await db
     .select()
@@ -36,4 +46,28 @@ export async function authenticateUser(
     name: user.name,
     email: user.email,
   };
+}
+
+async function ensureDemoUser() {
+  const existing = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, DEMO_USER.email))
+    .limit(1)
+    .then((rows) => rows[0]);
+
+  if (existing) {
+    return;
+  }
+
+  const hashedPassword = await bcrypt.hash(DEMO_USER.password, 12);
+
+  await db
+    .insert(users)
+    .values({
+      name: DEMO_USER.name,
+      email: DEMO_USER.email,
+      hashedPassword,
+    })
+    .onConflictDoNothing({ target: users.email });
 }

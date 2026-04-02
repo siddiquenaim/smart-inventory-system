@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const productStatusValues = ["draft", "active", "archived"] as const;
+export const productStatusValues = ["active", "out_of_stock"] as const;
 
 export const productSchema = z.object({
   name: z.string().trim().min(2, "Name must have at least 2 characters."),

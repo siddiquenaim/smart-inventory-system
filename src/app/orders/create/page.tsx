@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,7 +21,7 @@ type Product = {
   id: string;
   name: string;
   sku: string;
-  status: "draft" | "active" | "archived";
+  status: "active" | "out_of_stock";
   stockQuantity: number;
   threshold: number;
   price: string | number;
@@ -124,3 +124,4 @@ export default function CreateOrderPage() {
     </main>
   );
 }
+

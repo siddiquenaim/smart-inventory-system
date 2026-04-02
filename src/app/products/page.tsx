@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Pencil, Plus, Trash } from "lucide-react";
@@ -43,7 +43,7 @@ type Product = {
   name: string;
   sku: string;
   description: string;
-  status: "draft" | "active" | "archived";
+  status: "active" | "out_of_stock";
   stockQuantity: number;
   threshold: number;
   price: string | number;
@@ -99,10 +99,7 @@ const statusBadgeVariant = (status: Product["status"]) => {
   if (status === "active") {
     return "default" as const;
   }
-  if (status === "draft") {
-    return "secondary" as const;
-  }
-  return "outline" as const;
+  return "destructive" as const;
 };
 
 export default function ProductsPage() {
@@ -256,8 +253,8 @@ export default function ProductsPage() {
         </CardHeader>
         <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground sm:max-w-2xl">
-            Build your catalog with status-aware records so the team can see what is active,
-            what is archived, and which items are at risk of stockouts.
+            Build your catalog with status-aware records so the team can track active items and
+            products that are currently out of stock.
           </p>
           <Button
             variant="outline"
@@ -338,7 +335,9 @@ export default function ProductsPage() {
                         {product.categoryName ?? "Unassigned"}
                       </TableCell>
                       <TableCell>
-                        <Badge variant={statusBadgeVariant(product.status)}>{product.status}</Badge>
+                        <Badge variant={statusBadgeVariant(product.status)}>
+                          {product.status === "out_of_stock" ? "Out of Stock" : "Active"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -459,4 +458,3 @@ export default function ProductsPage() {
     </main>
   );
 }
-
