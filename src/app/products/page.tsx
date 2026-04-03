@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Pencil, Plus, Trash } from "lucide-react";
+import { toast } from "sonner";
 
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -159,6 +160,7 @@ export default function ProductsPage() {
   const handleAddProduct = async (input: ProductInput) => {
     setIsSaving(true);
     setModalError(null);
+    closeModal();
     try {
       const response = await fetch("/api/products", {
         method: "POST",
@@ -166,13 +168,13 @@ export default function ProductsPage() {
         body: JSON.stringify(input),
       });
       if (!response.ok) {
-        setModalError({ mode: "add", message: await getResponseError(response) });
+        toast.error(await getResponseError(response));
         return;
       }
       await fetchProducts();
-      closeModal();
+      toast.success("Product created.");
     } catch (error) {
-      setModalError({ mode: "add", message: createErrorMessage(error) });
+      toast.error(createErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -183,22 +185,24 @@ export default function ProductsPage() {
       setModalError({ mode: "edit", message: "Unable to find product to update." });
       return;
     }
+    const productId = selectedProduct.id;
     setIsSaving(true);
     setModalError(null);
+    closeModal();
     try {
-      const response = await fetch(`/api/products/${selectedProduct.id}`, {
+      const response = await fetch(`/api/products/${productId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
       if (!response.ok) {
-        setModalError({ mode: "edit", message: await getResponseError(response) });
+        toast.error(await getResponseError(response));
         return;
       }
       await fetchProducts();
-      closeModal();
+      toast.success("Product updated.");
     } catch (error) {
-      setModalError({ mode: "edit", message: createErrorMessage(error) });
+      toast.error(createErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -208,21 +212,23 @@ export default function ProductsPage() {
     if (!deleteTarget) {
       return;
     }
+    const productId = deleteTarget.id;
+    setDeleteTarget(null);
     setIsDeleting(true);
     setGlobalError(null);
     try {
-      const response = await fetch(`/api/products/${deleteTarget.id}`, {
+      const response = await fetch(`/api/products/${productId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
         const message = await getResponseError(response);
-        setGlobalError(message);
+        toast.error(message);
         return;
       }
       await fetchProducts();
-      setDeleteTarget(null);
+      toast.success("Product deleted.");
     } catch (error) {
-      setGlobalError(createErrorMessage(error));
+      toast.error(createErrorMessage(error));
     } finally {
       setIsDeleting(false);
     }

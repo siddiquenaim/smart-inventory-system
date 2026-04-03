@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { PackagePlus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -124,10 +125,11 @@ export default function RestockQueuePage() {
 
     const parsedQuantity = Number(restockQuantity);
     if (!Number.isInteger(parsedQuantity) || parsedQuantity < 0) {
-      setError("Stock quantity must be a whole number that is 0 or greater.");
+      toast.error("Stock quantity must be a whole number that is 0 or greater.");
       return;
     }
 
+    setRestockTarget(null);
     setIsSaving(true);
     setError(null);
     try {
@@ -138,14 +140,14 @@ export default function RestockQueuePage() {
       });
 
       if (!response.ok) {
-        setError(await getResponseError(response));
+        toast.error(await getResponseError(response));
         return;
       }
 
-      setRestockTarget(null);
       await fetchQueue();
+      toast.success("Stock updated.");
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Unable to restock product.");
+      toast.error(saveError instanceof Error ? saveError.message : "Unable to restock product.");
     } finally {
       setIsSaving(false);
     }
@@ -156,6 +158,7 @@ export default function RestockQueuePage() {
       return;
     }
 
+    setRemoveTarget(null);
     setIsRemoving(true);
     setError(null);
     try {
@@ -164,14 +167,16 @@ export default function RestockQueuePage() {
       });
 
       if (!response.ok) {
-        setError(await getResponseError(response));
+        toast.error(await getResponseError(response));
         return;
       }
 
-      setRemoveTarget(null);
       await fetchQueue();
+      toast.success("Queue item removed.");
     } catch (removeError) {
-      setError(removeError instanceof Error ? removeError.message : "Unable to remove queue item.");
+      toast.error(
+        removeError instanceof Error ? removeError.message : "Unable to remove queue item."
+      );
     } finally {
       setIsRemoving(false);
     }

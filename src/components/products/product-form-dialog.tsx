@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -72,13 +73,25 @@ export function ProductFormDialog({
     resolver: zodResolver(productSchema),
     defaultValues: defaultValues ?? emptyFormValue,
   });
+  const stockQuantity = useWatch({
+    control: form.control,
+    name: "stockQuantity",
+  });
+  const derivedStatus = Number(stockQuantity) <= 0 ? "out_of_stock" : "active";
 
   useEffect(() => {
     form.reset(defaultValues ?? emptyFormValue);
   }, [defaultValues, form]);
 
+  useEffect(() => {
+    form.setValue("status", derivedStatus, { shouldValidate: true });
+  }, [derivedStatus, form]);
+
   const handleSubmit = form.handleSubmit(async (values) => {
-    await onSubmit(values);
+    await onSubmit({
+      ...values,
+      status: derivedStatus,
+    });
     form.reset(defaultValues ?? emptyFormValue);
   });
 
@@ -167,26 +180,15 @@ export function ProductFormDialog({
             </div>
             <div className="space-y-1 text-sm">
               <Label>Status</Label>
-              <Controller
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="out_of_stock">Out of Stock</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              />
-              {form.formState.errors.status && (
-                <p className="text-xs text-destructive">
-                  {form.formState.errors.status.message}
-                </p>
-              )}
+              <div className="flex min-h-9 items-center rounded-2xl border border-input  px-3">
+                <Badge
+                  variant={
+                    derivedStatus === "out_of_stock" ? "destructive" : "default"
+                  }
+                >
+                  {derivedStatus === "out_of_stock" ? "Out of Stock" : "Active"}
+                </Badge>
+              </div>
             </div>
           </div>
 
@@ -255,4 +257,3 @@ export function ProductFormDialog({
     </Dialog>
   );
 }
-

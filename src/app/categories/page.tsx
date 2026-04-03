@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,7 @@ export default function CategoriesPage() {
   const handleAddCategory = async (input: CategoryInput) => {
     setIsSaving(true);
     setModalError(null);
+    closeModal();
     try {
       const response = await fetch("/api/categories", {
         method: "POST",
@@ -110,13 +112,13 @@ export default function CategoriesPage() {
         body: JSON.stringify(input),
       });
       if (!response.ok) {
-        setModalError({ mode: "add", message: await getResponseError(response) });
+        toast.error(await getResponseError(response));
         return;
       }
       await fetchCategories();
-      closeModal();
+      toast.success("Category created.");
     } catch (error) {
-      setModalError({ mode: "add", message: createErrorMessage(error) });
+      toast.error(createErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -127,22 +129,24 @@ export default function CategoriesPage() {
       setModalError({ mode: "edit", message: "Unable to find category to update." });
       return;
     }
+    const categoryId = selectedCategory.id;
     setIsSaving(true);
     setModalError(null);
+    closeModal();
     try {
-      const response = await fetch(`/api/categories/${selectedCategory.id}`, {
+      const response = await fetch(`/api/categories/${categoryId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
       if (!response.ok) {
-        setModalError({ mode: "edit", message: await getResponseError(response) });
+        toast.error(await getResponseError(response));
         return;
       }
       await fetchCategories();
-      closeModal();
+      toast.success("Category updated.");
     } catch (error) {
-      setModalError({ mode: "edit", message: createErrorMessage(error) });
+      toast.error(createErrorMessage(error));
     } finally {
       setIsSaving(false);
     }
@@ -152,21 +156,23 @@ export default function CategoriesPage() {
     if (!deleteTarget) {
       return;
     }
+    const categoryId = deleteTarget.id;
+    setDeleteTarget(null);
     setIsDeleting(true);
     setGlobalError(null);
     try {
-      const response = await fetch(`/api/categories/${deleteTarget.id}`, {
+      const response = await fetch(`/api/categories/${categoryId}`, {
         method: "DELETE",
       });
       if (!response.ok) {
         const message = await getResponseError(response);
-        setGlobalError(message);
+        toast.error(message);
         return;
       }
       await fetchCategories();
-      setDeleteTarget(null);
+      toast.success("Category deleted.");
     } catch (error) {
-      setGlobalError(createErrorMessage(error));
+      toast.error(createErrorMessage(error));
     } finally {
       setIsDeleting(false);
     }
