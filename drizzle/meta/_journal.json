@@ -43,6 +43,20 @@
       "when": 1775082600000,
       "tag": "0005_product_status_alignment",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775160600000,
+      "tag": "0006_restock_queue_uniqueness",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775226675018,
+      "tag": "0007_loud_mariko_yashida",
+      "breakpoints": true
     }
   ]
 }

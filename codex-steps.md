@@ -1,139 +1,82 @@
-## Smart Inventory Completion Plan (Strict Small-Step Gates)
+## Smart Inventory Completion Plan
 
-### Summary
+Rule: do one step at a time and do not move forward until the current step is correct.
 
-We’ll implement requirements 4–8 in **small, sequential steps**.  
-Rule: **no next step starts until the current step passes its gate** (API behavior, UI behavior, and regression checks).  
-Decisions locked from your inputs:
+### Step Status
 
-- Completed orders = **Delivered only**
-- Restock priority = **stock-ratio based**
-- Restock queue tie-breaker = **oldest first**
+1. `[DONE]` Step 4.1: Stock deduction + insufficient stock enforcement hardening
+2. `[DONE]` Step 6.1: Conflict detection hardening in order flows
+3. `[DONE]` Step 5.1: Automatic restock queue population
+4. `[NEXT]` Step 5.2: Restock Queue APIs + page
+5. `[PENDING]` Step 8.1: Activity log pipeline
+6. `[PENDING]` Step 7.1: Dashboard insights backend
+7. `[PENDING]` Step 7.2: Dashboard UI replacement
+8. `[PENDING]` Step 9: Stabilization and regression pass
 
-### Implementation Steps (with hard gates)
+### Locked Rules
 
-1. **Step 4.1: Stock deduction + insufficient stock enforcement hardening**
+- Completed orders = `delivered` only
+- Restock priority = stock-ratio based
+- Restock queue tie-breaker = oldest first
 
-- Backend: ensure order create/update paths always re-check live stock in transaction.
-- Error contract: return exact warning pattern `Only X items available in stock`.
-- Gate to pass:
+### Step Details
 
-1. Stock always deducts on successful order.
-2. Insufficient stock blocks confirmation with correct warning.
-3. If stock becomes 0, product status becomes `out_of_stock`.
+#### Step 4.1: Stock deduction + insufficient stock enforcement hardening
 
-4. **Step 6.1: Conflict detection hardening in order flows**
+- Ensure successful order creation deducts stock automatically.
+- If requested quantity exceeds stock, show `Only X items available in stock`.
+- If stock becomes `0`, product status becomes `out_of_stock`.
 
-- Enforce on backend (not only UI):
-- Reject duplicate product lines in same order with `This product is already added to the order.`
-- Reject unavailable products (`out_of_stock`) with `This product is currently unavailable.`
-- Apply to both order creation and any future order-item updates.
-- Gate to pass:
+#### Step 6.1: Conflict detection hardening in order flows
 
-1. Duplicate lines blocked consistently.
-2. Out-of-stock product cannot be ordered even if request is crafted manually.
+- Reject duplicate product lines with `This product is already added to the order.`
+- Reject unavailable products with `This product is currently unavailable.`
+- Enforce at both UI and API level.
 
-3. **Step 5.1: Automatic restock queue population**
+#### Step 5.1: Automatic restock queue population
 
-- Add queue sync logic whenever stock changes (order placement, cancel/restock/manual stock update).
-- Rule: product enters queue when `stockQuantity < threshold`.
-- Queue ordering: `stockQuantity ASC`, then `requestedAt ASC` (oldest first tie-breaker).
-- Priority (stock ratio):
+- Add queue sync whenever stock changes.
+- If `stockQuantity < threshold`, add or update the restock queue entry.
+- Sort queue by lowest stock first, then oldest request first.
+- Priority rules:
 - `high`: stock = 0
-- `medium`: stock > 0 and stock/threshold <= 0.5
-- `low`: stock/threshold > 0.5 and still below threshold
-- Gate to pass:
+- `medium`: stock ratio <= 0.5
+- `low`: still below threshold, but stock ratio > 0.5
 
-1. Queue entry auto-created/updated when below threshold.
-2. No duplicate queue rows per product (upsert behavior).
-3. Priority/ordering matches rules above.
+#### Step 5.2: Restock Queue APIs + page
 
-4. **Step 5.2: Restock Queue APIs + page**
-
-- Add API endpoints under existing Hono router:
-- `GET /api/restock-queue`
-- `PATCH /api/restock-queue/:id` (manual restock stock update + priority recalc)
-- `DELETE /api/restock-queue/:id` (manual remove)
-- Add `/restock-queue` page with table, priority badge, stock info, restock action, remove action.
-- Gate to pass:
-
-1. Queue visible and correctly sorted.
-2. Restock updates product stock and removes item when no longer low stock.
-3. Manual remove works and reflects instantly in UI.
-
-4. **Step 8.1: Activity log pipeline**
-
-- Add service helper for log writes and list reads.
-- Log actions for:
-- order created
-- order status changed
-- stock updated/restocked
-- product moved to restock queue
-- Add `GET /api/activity-logs?limit=10` and `/activity-logs` page.
-- Gate to pass:
-
-1. Latest 5–10 actions visible in reverse chronological order.
-2. Messages follow required style (time + action + actor/entity).
-
-3. **Step 7.1: Dashboard insights backend**
-
-- Replace placeholders with real metrics query service:
-- Total Orders Today
-- Pending vs Completed (completed = delivered only)
-- Low Stock Items Count
-- Revenue Today (sum of today’s order totals; use delivered orders)
-- Product summary list: name + stock + state (Low Stock/OK)
-- Add endpoint: `GET /api/dashboard/insights`.
-- Gate to pass:
-
-1. Metrics match DB data for same day boundaries.
-2. Pending/completed split matches locked definition.
-3. Product summary correctly labels low-stock vs ok.
-
-4. **Step 7.2: Dashboard UI replacement**
-
-- Wire dashboard cards and summary list to real API.
-- Keep loading/empty/error states deterministic.
-- Gate to pass:
-
-1. No placeholder metrics remain.
-2. Metrics update after order/stock operations.
-3. Summary examples match required format semantics.
-
-4. **Step 9 (stabilization before optional bonus)**
-
-- End-to-end regression pass for auth + categories + products + orders + restock + dashboard + logs.
-- Gate to pass:
-
-1. All mandatory requirements 1–8 satisfied in one flow.
-2. No route-level 404s from sidebar entries.
-3. Clear error messages for all guarded actions.
-
-### Public API / Interface Additions
-
-- New APIs:
+- Add:
 - `GET /api/restock-queue`
 - `PATCH /api/restock-queue/:id`
 - `DELETE /api/restock-queue/:id`
-- `GET /api/activity-logs?limit=`
-- `GET /api/dashboard/insights`
-- Error message contracts (user-visible, stable):
-- `Only X items available in stock`
-- `This product is already added to the order.`
-- `This product is currently unavailable.`
+- Add `/restock-queue` page with restock and remove actions.
 
-### Test Plan (required before each gate sign-off)
+#### Step 8.1: Activity log pipeline
 
-- **Stock handling:** exact deduction, insufficient stock rejection, zero-stock status transition.
-- **Conflict detection:** duplicate line rejection, out-of-stock rejection via API-level tests.
-- **Restock queue:** auto insert/update/remove, priority mapping correctness, deterministic sorting.
-- **Dashboard:** today filters, pending/completed math, revenue correctness.
-- **Activity logs:** required actions logged and ordered latest-first.
-- **Integration flow:** create product/category -> create order -> low stock queue -> restock -> queue clear -> dashboard/log updates.
+- Log:
+- order created
+- order status changed
+- stock updated/restocked
+- product added to restock queue
+- Add `GET /api/activity-logs?limit=10`
+- Add `/activity-logs` page
 
-### Assumptions (locked)
+#### Step 7.1: Dashboard insights backend
 
-- “Completed” means **Delivered** only.
-- Restock priority uses **stock ratio** thresholds defined above.
-- Queue tie-breaker for same stock is **oldest first** (`requestedAt ASC`).
-- Optional bonus items (search/filter expansion, pagination, analytics chart, role-based access) start only after all mandatory gates pass.
+- Add real metrics:
+- Total Orders Today
+- Pending vs Completed
+- Low Stock Items Count
+- Revenue Today
+- Product summary list
+- Add `GET /api/dashboard/insights`
+
+#### Step 7.2: Dashboard UI replacement
+
+- Replace placeholder dashboard cards and lists with live data.
+
+#### Step 9: Stabilization and regression pass
+
+- Validate requirements 1 to 8 together.
+- Verify no broken routes or missing pages from the sidebar.
+- Verify guarded actions show clear errors.

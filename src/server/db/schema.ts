@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -86,17 +87,23 @@ export const orderItems = pgTable("order_items", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const restockQueue = pgTable("restock_queue", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  productId: uuid("product_id")
-    .notNull()
-    .references(() => products.id, { onDelete: "cascade" }),
-  priority: restockPriorityEnum("priority").notNull().default("low"),
-  resolved: boolean("resolved").default(sql`false`).notNull(),
-  requestedAt: timestamp("requested_at", { withTimezone: true }).defaultNow().notNull(),
-  resolvedAt: timestamp("resolved_at", { withTimezone: true }),
-  note: text("note").default("").notNull(),
-});
+export const restockQueue = pgTable(
+  "restock_queue",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    priority: restockPriorityEnum("priority").notNull().default("low"),
+    resolved: boolean("resolved").default(sql`false`).notNull(),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).defaultNow().notNull(),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+    note: text("note").default("").notNull(),
+  },
+  (table) => ({
+    productIdUniqueIdx: uniqueIndex("restock_queue_product_id_unique").on(table.productId),
+  })
+);
 
 export const activityLogs = pgTable("activity_logs", {
   id: uuid("id").defaultRandom().primaryKey(),

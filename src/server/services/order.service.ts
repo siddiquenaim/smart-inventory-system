@@ -11,6 +11,10 @@ import { z } from "zod";
 
 import { db } from "@/server/db";
 import { orderItems, orders, products, users } from "@/server/db/schema";
+import {
+  resolveProductStatus,
+  syncRestockQueueForProduct,
+} from "@/server/services/restock.service";
 
 const ORDER_STATUS_VALUES = [
   "pending",
@@ -47,6 +51,11 @@ export const updateOrderStatusSchema = z.object({
 
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type OrderListQuery = z.infer<typeof orderListQuerySchema>;
+
+const buildStockWarning = (productName: string, availableStock: number) =>
+  `Only ${availableStock} items available in stock for ${productName}.`;
+const DUPLICATE_PRODUCT_MESSAGE = "This product is already added to the order.";
+const UNAVAILABLE_PRODUCT_MESSAGE = "This product is currently unavailable.";
 
 const buildOrderNumber = () => {
   const timestamp = Date.now().toString().slice(-10);
@@ -159,7 +168,7 @@ export async function createOrder(input: CreateOrderInput) {
   }
 
   if (duplicateIds.size > 0) {
-    throw new Error("Duplicate products are not allowed in a single order.");
+    throw new Error(DUPLICATE_PRODUCT_MESSAGE);
   }
 
   return await db.transaction(async (tx) => {
@@ -171,6 +180,7 @@ export async function createOrder(input: CreateOrderInput) {
         name: products.name,
         price: products.price,
         stockQuantity: products.stockQuantity,
+        threshold: products.threshold,
       })
       .from(products)
       .where(inArray(products.id, productIds));
@@ -187,10 +197,11 @@ export async function createOrder(input: CreateOrderInput) {
       if (!product) {
         throw new Error("One or more products were not found.");
       }
+      if (product.stockQuantity <= 0) {
+        throw new Error(UNAVAILABLE_PRODUCT_MESSAGE);
+      }
       if (product.stockQuantity < item.quantity) {
-        throw new Error(
-          `Insufficient stock for ${product.name}. Available: ${product.stockQuantity}.`
-        );
+        throw new Error(buildStockWarning(product.name, product.stockQuantity));
       }
       total += Number(product.price) * item.quantity;
     }
@@ -233,9 +244,15 @@ export async function createOrder(input: CreateOrderInput) {
         .update(products)
         .set({
           stockQuantity: nextStock,
-          status: nextStock <= 0 ? "out_of_stock" : "active",
+          status: resolveProductStatus(nextStock),
         })
         .where(eq(products.id, item.productId));
+
+      await syncRestockQueueForProduct(tx, {
+        productId: item.productId,
+        stockQuantity: nextStock,
+        threshold: product.threshold,
+      });
     }
 
     return {
@@ -288,6 +305,7 @@ export async function updateOrderStatus(orderId: string, nextStatus: OrderStatus
         .select({
           id: products.id,
           stockQuantity: products.stockQuantity,
+          threshold: products.threshold,
         })
         .from(products)
         .where(inArray(products.id, restockProductIds));
@@ -301,9 +319,15 @@ export async function updateOrderStatus(orderId: string, nextStatus: OrderStatus
           .update(products)
           .set({
             stockQuantity: nextStock,
-            status: nextStock > 0 ? "active" : "out_of_stock",
+            status: resolveProductStatus(nextStock),
           })
           .where(eq(products.id, item.productId));
+
+        await syncRestockQueueForProduct(tx, {
+          productId: item.productId,
+          stockQuantity: nextStock,
+          threshold: product.threshold,
+        });
       }
     }
 

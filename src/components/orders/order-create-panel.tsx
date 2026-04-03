@@ -55,6 +55,11 @@ const formatCurrency = (value: number) =>
     currency: "USD",
   }).format(value);
 
+const buildStockWarning = (productName: string, availableStock: number) =>
+  `Only ${availableStock} items available in stock for ${productName}.`;
+const DUPLICATE_PRODUCT_MESSAGE = "This product is already added to the order.";
+const UNAVAILABLE_PRODUCT_MESSAGE = "This product is currently unavailable.";
+
 export function OrderCreatePanel({ products, onOrderCreated }: OrderCreatePanelProps) {
   const { data: session } = useSession();
   const [lines, setLines] = useState<Line[]>([
@@ -146,13 +151,16 @@ export function OrderCreatePanel({ products, onOrderCreated }: OrderCreatePanelP
       if (!product) {
         return "One or more selected products are invalid.";
       }
+      if (product.status === "out_of_stock" || product.stockQuantity <= 0) {
+        return UNAVAILABLE_PRODUCT_MESSAGE;
+      }
       if (line.quantity > product.stockQuantity) {
-        return `Insufficient stock for ${product.name}.`;
+        return buildStockWarning(product.name, product.stockQuantity);
       }
     }
 
     if (duplicateProductIds.size > 0) {
-      return "Duplicate products are not allowed in a single order.";
+      return DUPLICATE_PRODUCT_MESSAGE;
     }
 
     return null;
@@ -261,7 +269,14 @@ export function OrderCreatePanel({ products, onOrderCreated }: OrderCreatePanelP
                     </SelectTrigger>
                     <SelectContent>
                       {products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
+                        <SelectItem
+                          key={product.id}
+                          value={product.id}
+                          disabled={
+                            product.status === "out_of_stock" ||
+                            product.stockQuantity <= 0
+                          }
+                        >
                           {product.name} ({product.sku}) - Stock {product.stockQuantity}
                         </SelectItem>
                       ))}
@@ -294,7 +309,13 @@ export function OrderCreatePanel({ products, onOrderCreated }: OrderCreatePanelP
               </div>
               {isDuplicate ? (
                 <p className="mt-2 text-xs text-destructive">
-                  This product is already selected in another line.
+                  {DUPLICATE_PRODUCT_MESSAGE}
+                </p>
+              ) : null}
+              {selectedProduct?.status === "out_of_stock" ||
+              (selectedProduct?.stockQuantity ?? 0) <= 0 ? (
+                <p className="mt-2 text-xs text-destructive">
+                  {UNAVAILABLE_PRODUCT_MESSAGE}
                 </p>
               ) : null}
             </div>
