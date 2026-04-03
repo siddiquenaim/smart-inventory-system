@@ -7,11 +7,11 @@ Rule: do one step at a time and do not move forward until the current step is co
 1. `[DONE]` Step 4.1: Stock deduction + insufficient stock enforcement hardening
 2. `[DONE]` Step 6.1: Conflict detection hardening in order flows
 3. `[DONE]` Step 5.1: Automatic restock queue population
-4. `[NEXT]` Step 5.2: Restock Queue APIs + page
-5. `[PENDING]` Step 8.1: Activity log pipeline
-6. `[PENDING]` Step 7.1: Dashboard insights backend
-7. `[PENDING]` Step 7.2: Dashboard UI replacement
-8. `[PENDING]` Step 9: Stabilization and regression pass
+4. `[DONE]` Step 5.2: Restock Queue APIs + page
+5. `[DONE]` Step 8.1: Activity log pipeline
+6. `[DONE]` Step 7.1: Dashboard insights backend
+7. `[DONE]` Step 7.2: Dashboard UI replacement
+8. `[DONE]` Step 9: Stabilization and regression pass
 
 ### Locked Rules
 

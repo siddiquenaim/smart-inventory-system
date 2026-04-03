@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { db } from "@/server/db";
 import { orderItems, orders, products, users } from "@/server/db/schema";
+import { createActivityLog } from "@/server/services/activity.service";
 import {
   resolveProductStatus,
   syncRestockQueueForProduct,
@@ -250,10 +251,23 @@ export async function createOrder(input: CreateOrderInput) {
 
       await syncRestockQueueForProduct(tx, {
         productId: item.productId,
+        productName: product.name,
         stockQuantity: nextStock,
         threshold: product.threshold,
+        actorUserId: input.userId,
       });
     }
+
+    await createActivityLog(tx, {
+      action: "order_created",
+      details: `Order ${order.orderNumber} created by user`,
+      userId: input.userId,
+      metadata: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        total: order.total,
+      },
+    });
 
     return {
       id: order.id,
@@ -264,7 +278,11 @@ export async function createOrder(input: CreateOrderInput) {
   });
 }
 
-export async function updateOrderStatus(orderId: string, nextStatus: OrderStatus) {
+export async function updateOrderStatus(
+  orderId: string,
+  nextStatus: OrderStatus,
+  actorUserId?: string | null
+) {
   return await db.transaction(async (tx) => {
     const currentOrder = await tx
       .select({
@@ -345,10 +363,29 @@ export async function updateOrderStatus(orderId: string, nextStatus: OrderStatus
       throw new Error("Unable to update order.");
     }
 
+    const orderDetails = await tx
+      .select({
+        orderNumber: orders.orderNumber,
+      })
+      .from(orders)
+      .where(eq(orders.id, currentOrder.id))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    await createActivityLog(tx, {
+      action: "order_status_updated",
+      details: `Order ${orderDetails?.orderNumber ?? currentOrder.id} marked as ${nextStatus}`,
+      userId: actorUserId,
+      metadata: {
+        orderId: currentOrder.id,
+        status: nextStatus,
+      },
+    });
+
     return row;
   });
 }
 
-export async function cancelOrder(orderId: string) {
-  return await updateOrderStatus(orderId, "cancelled");
+export async function cancelOrder(orderId: string, actorUserId?: string | null) {
+  return await updateOrderStatus(orderId, "cancelled", actorUserId);
 }

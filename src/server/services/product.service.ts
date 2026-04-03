@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/server/db";
 import { categories, products } from "@/server/db/schema";
 import type { ProductInput } from "@/lib/validations/product";
+import { createActivityLog } from "@/server/services/activity.service";
 import {
   resolveProductStatus,
   syncRestockQueueForProduct,
@@ -28,7 +29,7 @@ export async function listProducts() {
     .orderBy(products.createdAt);
 }
 
-export async function createProduct(input: ProductInput) {
+export async function createProduct(input: ProductInput, actorUserId?: string | null) {
   const {
     name,
     sku,
@@ -54,6 +55,7 @@ export async function createProduct(input: ProductInput) {
       })
       .returning({
         id: products.id,
+        name: products.name,
         stockQuantity: products.stockQuantity,
         threshold: products.threshold,
       });
@@ -65,13 +67,30 @@ export async function createProduct(input: ProductInput) {
 
     await syncRestockQueueForProduct(tx, {
       productId: product.id,
+      productName: product.name,
       stockQuantity: product.stockQuantity,
       threshold: product.threshold,
+      actorUserId,
+    });
+
+    await createActivityLog(tx, {
+      action: "product_created",
+      details: `Product "${product.name}" created`,
+      userId: actorUserId,
+      metadata: {
+        productId: product.id,
+        stockQuantity: product.stockQuantity,
+        threshold: product.threshold,
+      },
     });
   });
 }
 
-export async function updateProduct(id: string, input: ProductInput) {
+export async function updateProduct(
+  id: string,
+  input: ProductInput,
+  actorUserId?: string | null
+) {
   const {
     name,
     sku,
@@ -98,6 +117,7 @@ export async function updateProduct(id: string, input: ProductInput) {
       .where(eq(products.id, id))
       .returning({
         id: products.id,
+        name: products.name,
         stockQuantity: products.stockQuantity,
         threshold: products.threshold,
       });
@@ -109,8 +129,21 @@ export async function updateProduct(id: string, input: ProductInput) {
 
     await syncRestockQueueForProduct(tx, {
       productId: product.id,
+      productName: product.name,
       stockQuantity: product.stockQuantity,
       threshold: product.threshold,
+      actorUserId,
+    });
+
+    await createActivityLog(tx, {
+      action: "stock_updated",
+      details: `Stock updated for "${product.name}"`,
+      userId: actorUserId,
+      metadata: {
+        productId: product.id,
+        stockQuantity: product.stockQuantity,
+        threshold: product.threshold,
+      },
     });
   });
 }

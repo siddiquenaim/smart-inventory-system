@@ -373,7 +373,7 @@ export default function CategoriesPage() {
               onClick={confirmDeleteCategory}
               disabled={isDeleting}
             >
-              {isDeleting ? "Deleting…" : "Delete category"}
+              {isDeleting ? "Deleting..." : "Delete category"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -381,3 +381,4 @@ export default function CategoriesPage() {
     </main>
   );
 }
+

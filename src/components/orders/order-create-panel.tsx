@@ -312,8 +312,9 @@ export function OrderCreatePanel({ products, onOrderCreated }: OrderCreatePanelP
                   {DUPLICATE_PRODUCT_MESSAGE}
                 </p>
               ) : null}
-              {selectedProduct?.status === "out_of_stock" ||
-              (selectedProduct?.stockQuantity ?? 0) <= 0 ? (
+              {selectedProduct &&
+              (selectedProduct.status === "out_of_stock" ||
+                selectedProduct.stockQuantity <= 0) ? (
                 <p className="mt-2 text-xs text-destructive">
                   {UNAVAILABLE_PRODUCT_MESSAGE}
                 </p>

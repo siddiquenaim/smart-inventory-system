@@ -1,8 +1,14 @@
 import { Hono } from "hono";
 import { handle } from "hono/vercel";
+import { getServerSession } from "next-auth/next";
 
 import { categorySchema } from "@/lib/validations/category";
+import { authOptions } from "@/lib/auth";
 import { productSchema } from "@/lib/validations/product";
+import {
+  activityLogQuerySchema,
+  listActivityLogs,
+} from "@/server/services/activity.service";
 import {
   createCategory,
   deleteCategory,
@@ -15,6 +21,7 @@ import {
   listProducts,
   updateProduct,
 } from "@/server/services/product.service";
+import { getDashboardInsights } from "@/server/services/dashboard.service";
 import {
   cancelOrder,
   createOrder,
@@ -25,6 +32,12 @@ import {
   updateOrderStatus,
   updateOrderStatusSchema,
 } from "@/server/services/order.service";
+import {
+  listRestockQueue,
+  removeRestockQueueItem,
+  restockQueueUpdateSchema,
+  updateRestockQueueStock,
+} from "@/server/services/restock.service";
 
 const idValidator = (value: string | undefined) =>
   typeof value === "string" && /^[0-9a-fA-F-]{36}$/.test(value);
@@ -46,6 +59,12 @@ const normalizeOrderStatusError = (error: unknown) => {
 export const runtime = "nodejs";
 
 const app = new Hono().basePath("/api");
+
+const getActorUserId = async () => {
+  const session = await getServerSession(authOptions);
+  const sessionUser = session?.user as { id?: string } | undefined;
+  return sessionUser?.id ?? null;
+};
 
 app.get("/health", (c) => {
   return c.json({
@@ -97,13 +116,18 @@ app.get("/products", async (c) => {
   return c.json(data);
 });
 
+app.get("/dashboard/insights", async (c) => {
+  const data = await getDashboardInsights();
+  return c.json(data);
+});
+
 app.post("/products", async (c) => {
   const body = await c.req.json().catch(() => null);
   const parsed = productSchema.safeParse(body);
   if (!parsed.success) {
     return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, 400);
   }
-  await createProduct(parsed.data);
+  await createProduct(parsed.data, await getActorUserId());
   return c.json({ ok: true }, 201);
 });
 
@@ -117,7 +141,7 @@ app.put("/products/:id", async (c) => {
   if (!parsed.success) {
     return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, 400);
   }
-  await updateProduct(id, parsed.data);
+  await updateProduct(id, parsed.data, await getActorUserId());
   return c.json({ ok: true });
 });
 
@@ -188,7 +212,7 @@ app.patch("/orders/:id/status", async (c) => {
   }
 
   try {
-    const result = await updateOrderStatus(id, parsed.data.status);
+    const result = await updateOrderStatus(id, parsed.data.status, await getActorUserId());
     return c.json({ ok: true, data: result });
   } catch (error) {
     const message = normalizeOrderStatusError(error);
@@ -203,10 +227,70 @@ app.post("/orders/:id/cancel", async (c) => {
   }
 
   try {
-    const result = await cancelOrder(id);
+    const result = await cancelOrder(id, await getActorUserId());
     return c.json({ ok: true, data: result });
   } catch (error) {
     const message = normalizeOrderStatusError(error);
+    return c.json({ error: message }, 400);
+  }
+});
+
+app.get("/restock-queue", async (c) => {
+  const data = await listRestockQueue();
+  return c.json(data);
+});
+
+app.patch("/restock-queue/:id", async (c) => {
+  const { id } = c.req.param();
+  if (!id || !idValidator(id)) {
+    return c.json({ error: "Invalid id" }, 400);
+  }
+
+  const body = await c.req.json().catch(() => null);
+  const parsed = restockQueueUpdateSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid input" }, 400);
+  }
+
+  try {
+    const result = await updateRestockQueueStock(
+      id,
+      parsed.data.stockQuantity,
+      await getActorUserId()
+    );
+    return c.json({ ok: true, data: result });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to update restock queue item.";
+    return c.json({ error: message }, 400);
+  }
+});
+
+app.get("/activity-logs", async (c) => {
+  const limit = c.req.query("limit");
+  const parsed = activityLogQuerySchema.safeParse({
+    limit: limit || undefined,
+  });
+  if (!parsed.success) {
+    return c.json({ error: parsed.error.issues[0]?.message ?? "Invalid query" }, 400);
+  }
+
+  const data = await listActivityLogs(parsed.data.limit);
+  return c.json(data);
+});
+
+app.delete("/restock-queue/:id", async (c) => {
+  const { id } = c.req.param();
+  if (!id || !idValidator(id)) {
+    return c.json({ error: "Invalid id" }, 400);
+  }
+
+  try {
+    await removeRestockQueueItem(id);
+    return c.json({ ok: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to remove restock queue item.";
     return c.json({ error: message }, 400);
   }
 });
