@@ -53,8 +53,8 @@ const metricCardConfig = [
   },
   {
     key: "pendingOrders",
-    title: "Pending Orders",
-    note: "Orders still waiting for confirmation or fulfillment.",
+    title: "Open Orders",
+    note: "Pending, confirmed, and shipped orders still in progress.",
     icon: Boxes,
   },
   {
@@ -73,7 +73,11 @@ const metricCardConfig = [
 
 const getResponseError = async (response: Response) => {
   const payload = await response.json().catch(() => null);
-  return payload?.error ?? response.statusText ?? "Unable to load dashboard insights.";
+  return (
+    payload?.error ??
+    response.statusText ??
+    "Unable to load dashboard insights."
+  );
 };
 
 const formatCurrency = (value: number) =>
@@ -110,7 +114,7 @@ export function DashboardShell({ user }: DashboardShellProps) {
           setError(
             fetchError instanceof Error
               ? fetchError.message
-              : "Unable to load dashboard insights."
+              : "Unable to load dashboard insights.",
           );
         }
       } finally {
@@ -128,13 +132,13 @@ export function DashboardShell({ user }: DashboardShellProps) {
   }, []);
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-6xl px-6 py-14 sm:px-8 lg:px-10">
+    <main className="mx-auto flex min-h-screen w-full max-w-6xl">
       <div className="w-full space-y-8">
         <motion.section
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, ease: "easeOut" }}
-          className="flex flex-col gap-5 rounded-[2rem] border border-border/70 bg-card/75 p-7 backdrop-blur-sm sm:p-8"
+          className="flex flex-col gap-5 rounded-[2rem] border border-border/70 bg-card/75 p-6 backdrop-blur-sm sm:p-7"
         >
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-3">
@@ -149,8 +153,8 @@ export function DashboardShell({ user }: DashboardShellProps) {
                   {user.name ? `Welcome back, ${user.name}` : "Dashboard"}
                 </h1>
                 <p className="max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
-                  Monitor today&apos;s order flow, track low-stock pressure, and keep the most
-                  critical product levels visible from one place.
+                  Monitor today&apos;s order flow, track low-stock pressure, and
+                  keep the most critical product levels visible from one place.
                 </p>
               </div>
             </div>
@@ -165,18 +169,24 @@ export function DashboardShell({ user }: DashboardShellProps) {
             </div>
             <div className="rounded-2xl border border-border/70 bg-background/80 p-5">
               <p className="text-sm text-muted-foreground">Revenue Today</p>
-              <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-foreground">
-                {loading || !insights ? <Skeleton className="h-8 w-28 rounded" /> : formatCurrency(insights.metrics.revenueToday)}
-              </p>
+              <div className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-foreground">
+                {loading || !insights ? (
+                  <Skeleton className="h-8 w-28 rounded" />
+                ) : (
+                  formatCurrency(insights.metrics.revenueToday)
+                )}
+              </div>
             </div>
             <div className="rounded-2xl border border-border/70 bg-background/80 p-5">
-              <p className="text-sm text-muted-foreground">Pending vs Completed</p>
+              <p className="text-sm text-muted-foreground">Open vs Completed</p>
               <div className="mt-2 flex items-center gap-2 text-base font-medium text-foreground">
                 {loading || !insights ? (
                   <Skeleton className="h-6 w-40 rounded" />
                 ) : (
                   <>
-                    <Badge variant="outline">{insights.metrics.pendingOrders} pending</Badge>
+                    <Badge variant="outline">
+                      {insights.metrics.pendingOrders} open
+                    </Badge>
                     <Badge variant="secondary">
                       {insights.metrics.completedOrders} completed
                     </Badge>
@@ -209,10 +219,12 @@ export function DashboardShell({ user }: DashboardShellProps) {
                 }}
               >
                 <Card className="h-full border border-white/50 bg-white/80 backdrop-blur-sm">
-                  <CardHeader>
+                  <CardHeader className="min-h-[8.5rem]">
                     <div className="flex items-start justify-between gap-4">
                       <div className="space-y-1">
-                        <CardTitle className="text-base tracking-[-0.02em]">{title}</CardTitle>
+                        <CardTitle className="text-base tracking-[-0.02em]">
+                          {title}
+                        </CardTitle>
                         <CardDescription>{note}</CardDescription>
                       </div>
                       <div className="rounded-2xl bg-primary/10 p-2 text-primary">
@@ -244,7 +256,9 @@ export function DashboardShell({ user }: DashboardShellProps) {
             <CardHeader>
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-1">
-                  <CardTitle className="text-lg tracking-[-0.03em]">Product Summary</CardTitle>
+                  <CardTitle className="text-lg tracking-[-0.03em]">
+                    Product Summary
+                  </CardTitle>
                   <CardDescription>
                     Critical product inventory snapshots with clear stock state.
                   </CardDescription>
@@ -272,16 +286,25 @@ export function DashboardShell({ user }: DashboardShellProps) {
                     className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-background/70 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div className="space-y-1">
-                      <p className="font-medium text-foreground">{product.name}</p>
+                      <p className="font-medium text-foreground">
+                        {product.name}
+                      </p>
                       <p className="text-sm text-muted-foreground">
                         Threshold: {product.threshold}
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
                       <p className="text-sm font-medium text-foreground">
-                        {product.stockQuantity} {product.stockQuantity === 1 ? "left" : "available"}
+                        {product.stockQuantity}{" "}
+                        {product.stockQuantity === 1 ? "left" : "available"}
                       </p>
-                      <Badge variant={product.state === "Low Stock" ? "destructive" : "secondary"}>
+                      <Badge
+                        variant={
+                          product.state === "Low Stock"
+                            ? "destructive"
+                            : "secondary"
+                        }
+                      >
                         {product.state}
                       </Badge>
                     </div>

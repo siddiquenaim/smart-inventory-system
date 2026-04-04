@@ -6,7 +6,6 @@ import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import {
-  ArrowLeft,
   Eye,
   EyeOff,
   Loader2,
@@ -82,29 +81,19 @@ export default function LoginPage() {
             Sign in to the inventory control workspace.
           </h1>
           <p className="mt-5 max-w-lg text-base leading-7 text-muted-foreground">
-            This login screen verifies the credentials flow, session handling,
-            and the protected route pattern before feature development starts.
+            Access orders, stock levels, categories, and operational activity
+            from one authenticated workspace.
           </p>
           <div className="mt-8 rounded-3xl border border-border/70 bg-card/70 p-5">
             <p className="text-sm font-medium text-foreground">New here?</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Create an account when you are ready.{" "}
+              Create an account to start managing products, orders, and stock.{" "}
               <Link className="text-primary underline" href={ROUTES.signup}>
-                Request access
+                Sign up
               </Link>
               .
             </p>
           </div>
-          <Button
-            asChild
-            variant="ghost"
-            className="mt-6 w-fit rounded-full px-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
-          >
-            <Link href={ROUTES.home}>
-              <ArrowLeft className="size-4" />
-              Back to home
-            </Link>
-          </Button>
         </section>
 
         <Card className="border border-white/50 bg-white/80 backdrop-blur-sm">

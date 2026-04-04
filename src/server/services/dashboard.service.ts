@@ -1,4 +1,4 @@
-import { and, count, eq, gte, lte, sum } from "drizzle-orm";
+import { and, count, eq, gte, inArray, lte, sum } from "drizzle-orm";
 
 import { db } from "@/server/db";
 import { orders, products } from "@/server/db/schema";
@@ -19,6 +19,7 @@ export async function getDashboardInsights() {
   const now = new Date();
   const dayStart = toDayStart(now);
   const dayEnd = toDayEnd(now);
+  const activeOrderStatuses = ["pending", "confirmed", "shipped"] as const;
 
   const [ordersTodayResult, pendingOrdersResult, completedOrdersResult, revenueTodayResult] =
     await Promise.all([
@@ -30,7 +31,7 @@ export async function getDashboardInsights() {
       db
         .select({ value: count() })
         .from(orders)
-        .where(eq(orders.status, "pending"))
+        .where(inArray(orders.status, activeOrderStatuses))
         .then((rows) => rows[0]?.value ?? 0),
       db
         .select({ value: count() })

@@ -26,6 +26,7 @@ import {
   cancelOrder,
   createOrder,
   createOrderSchema,
+  deleteOrder,
   getOrderById,
   listOrders,
   orderListQuerySchema,
@@ -231,6 +232,22 @@ app.post("/orders/:id/cancel", async (c) => {
     return c.json({ ok: true, data: result });
   } catch (error) {
     const message = normalizeOrderStatusError(error);
+    return c.json({ error: message }, 400);
+  }
+});
+
+app.delete("/orders/:id", async (c) => {
+  const { id } = c.req.param();
+  if (!id || !idValidator(id)) {
+    return c.json({ error: "Invalid id" }, 400);
+  }
+
+  try {
+    const result = await deleteOrder(id, await getActorUserId());
+    return c.json({ ok: true, data: result });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unable to delete order.";
     return c.json({ error: message }, 400);
   }
 });

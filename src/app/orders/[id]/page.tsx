@@ -1,11 +1,19 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,6 +41,8 @@ import {
 } from "@/components/ui/table";
 
 type OrderStatus = "pending" | "confirmed" | "shipped" | "delivered" | "cancelled";
+
+const ORDER_STATUS_OPTIONS: OrderStatus[] = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
 
 type OrderItemDetail = {
   id: string;
@@ -84,7 +94,7 @@ const statusVariant = (status: OrderStatus) => {
 
 const allowedTransitions = (status: OrderStatus): OrderStatus[] => {
   if (status === "pending") return ["confirmed", "cancelled"];
-  if (status === "confirmed") return ["shipped", "cancelled"];
+  if (status === "confirmed") return ["shipped", "delivered", "cancelled"];
   if (status === "shipped") return ["delivered"];
   return [];
 };
@@ -98,6 +108,8 @@ export default function OrderDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [nextStatus, setNextStatus] = useState<OrderStatus | "">("");
 
   const fetchOrderDetail = useCallback(async () => {
@@ -131,7 +143,6 @@ export default function OrderDetailsPage() {
     () => (detail ? allowedTransitions(detail.status) : []),
     [detail]
   );
-  const canCancel = detail?.status === "pending" || detail?.status === "confirmed";
 
   const updateStatus = async () => {
     if (!orderId || !nextStatus) {
@@ -159,24 +170,34 @@ export default function OrderDetailsPage() {
     }
   };
 
-  const cancelOrder = async () => {
-    if (!orderId) return;
+  const deleteCurrentOrder = async () => {
+    if (!orderId || !detail) {
+      return;
+    }
 
-    setIsSaving(true);
+    const confirmed = window.confirm(
+      `Delete order ${detail.orderNumber}? This restores stock for non-cancelled orders and cannot be undone.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setIsDeleting(true);
     setError(null);
     try {
-      const response = await fetch(`/api/orders/${orderId}/cancel`, {
-        method: "POST",
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: "DELETE",
       });
       if (!response.ok) {
         setError(await getResponseError(response));
         return;
       }
-      await fetchOrderDetail();
+      router.push("/orders");
+      router.refresh();
     } catch (actionError) {
-      setError(actionError instanceof Error ? actionError.message : "Unable to cancel order.");
+      setError(actionError instanceof Error ? actionError.message : "Unable to delete order.");
     } finally {
-      setIsSaving(false);
+      setIsDeleting(false);
     }
   };
 
@@ -187,7 +208,7 @@ export default function OrderDetailsPage() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle className="text-2xl">Order Details</CardTitle>
-              <CardDescription>Update status or cancel this order from this page.</CardDescription>
+              <CardDescription>Manage this order by updating its status from this page.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
               <Button asChild variant="outline" className="rounded-full">
@@ -198,6 +219,15 @@ export default function OrderDetailsPage() {
               </Button>
               <Button variant="ghost" className="rounded-full" onClick={() => router.refresh()}>
                 Refresh
+              </Button>
+              <Button
+                variant="destructive"
+                className="rounded-full"
+                onClick={() => void deleteCurrentOrder()}
+                disabled={isDeleting}
+              >
+                <Trash2 className="size-4" />
+                {isDeleting ? "Deleting..." : "Delete order"}
               </Button>
             </div>
           </div>
@@ -252,7 +282,7 @@ export default function OrderDetailsPage() {
           <Card className="border border-border/80 bg-card/70">
             <CardHeader>
               <CardTitle>Manage Status</CardTitle>
-              <CardDescription>Order status can only be changed on this details page.</CardDescription>
+              <CardDescription>All order statuses are visible here. Unavailable transitions are disabled.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap items-end gap-3">
@@ -263,17 +293,14 @@ export default function OrderDetailsPage() {
                       <SelectValue placeholder="Select status" />
                     </SelectTrigger>
                     <SelectContent>
-                      {transitionOptions.map((status) => (
-                        <SelectItem key={status} value={status}>{status}</SelectItem>
+                      {ORDER_STATUS_OPTIONS.map((status) => (
+                        <SelectItem key={status} value={status} disabled={status === detail.status || !transitionOptions.includes(status)}>{status}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
                 <Button onClick={() => void updateStatus()} disabled={!nextStatus || isSaving}>
                   {isSaving ? "Saving..." : "Update status"}
-                </Button>
-                <Button variant="destructive" onClick={() => void cancelOrder()} disabled={!canCancel || isSaving}>
-                  Cancel order
                 </Button>
               </div>
             </CardContent>
@@ -312,8 +339,48 @@ export default function OrderDetailsPage() {
           <CardContent className="py-6 text-sm text-muted-foreground">Order not found.</CardContent>
         </Card>
       )}
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete order?</DialogTitle>
+            <DialogDescription>
+              This removes the order permanently and restores stock for non-cancelled orders.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm text-muted-foreground">
+              Confirm deletion of <span className="font-semibold text-foreground">{detail?.orderNumber}</span>.
+              This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void deleteCurrentOrder()}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete order"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }
+
+
+
+
+
+
+
 
 

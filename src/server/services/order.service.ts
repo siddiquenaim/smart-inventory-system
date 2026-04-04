@@ -66,7 +66,7 @@ const buildOrderNumber = () => {
 
 const ALLOWED_STATUS_TRANSITIONS: Record<OrderStatus, OrderStatus[]> = {
   pending: ["confirmed", "cancelled"],
-  confirmed: ["shipped", "cancelled"],
+  confirmed: ["shipped", "delivered", "cancelled"],
   shipped: ["delivered"],
   delivered: [],
   cancelled: [],
@@ -388,4 +388,85 @@ export async function updateOrderStatus(
 
 export async function cancelOrder(orderId: string, actorUserId?: string | null) {
   return await updateOrderStatus(orderId, "cancelled", actorUserId);
+}
+
+export async function deleteOrder(orderId: string, actorUserId?: string | null) {
+  return await db.transaction(async (tx) => {
+    const currentOrder = await tx
+      .select({
+        id: orders.id,
+        orderNumber: orders.orderNumber,
+        status: orders.status,
+      })
+      .from(orders)
+      .where(eq(orders.id, orderId))
+      .limit(1)
+      .then((rows) => rows[0]);
+
+    if (!currentOrder) {
+      throw new Error("Order not found.");
+    }
+
+    const itemRows = await tx
+      .select({
+        productId: orderItems.productId,
+        quantity: orderItems.quantity,
+      })
+      .from(orderItems)
+      .where(eq(orderItems.orderId, currentOrder.id));
+
+    if (currentOrder.status !== "cancelled" && itemRows.length > 0) {
+      const restockProductIds = itemRows.map((item) => item.productId);
+      const restockProducts = await tx
+        .select({
+          id: products.id,
+          stockQuantity: products.stockQuantity,
+          threshold: products.threshold,
+        })
+        .from(products)
+        .where(inArray(products.id, restockProductIds));
+
+      const stockMap = new Map(
+        restockProducts.map((product) => [product.id, product])
+      );
+
+      for (const item of itemRows) {
+        const product = stockMap.get(item.productId);
+        if (!product) continue;
+
+        const nextStock = product.stockQuantity + item.quantity;
+        await tx
+          .update(products)
+          .set({
+            stockQuantity: nextStock,
+            status: resolveProductStatus(nextStock),
+          })
+          .where(eq(products.id, item.productId));
+
+        await syncRestockQueueForProduct(tx, {
+          productId: item.productId,
+          stockQuantity: nextStock,
+          threshold: product.threshold,
+        });
+      }
+    }
+
+    await tx.delete(orders).where(eq(orders.id, currentOrder.id));
+
+    await createActivityLog(tx, {
+      action: "order_deleted",
+      details: `Order ${currentOrder.orderNumber} deleted`,
+      userId: actorUserId,
+      metadata: {
+        orderId: currentOrder.id,
+        orderNumber: currentOrder.orderNumber,
+        status: currentOrder.status,
+      },
+    });
+
+    return {
+      id: currentOrder.id,
+      orderNumber: currentOrder.orderNumber,
+    };
+  });
 }
